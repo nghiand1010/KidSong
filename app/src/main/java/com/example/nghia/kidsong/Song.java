@@ -5,37 +5,56 @@ package com.example.nghia.kidsong;
  */
 
 public class Song {
-    private long id;
-    private String title;
-    private String artist;
+    private String id;
+    private String name;
+    private String mp3;
+    private String url;
 
-    public Song(long id, String title, String artist) {
-        this.id = id;
-        this.title = title;
-        this.artist = artist;
+    public Song()
+    {
+
     }
 
-    public long getId() {
+    public Song(String id, String name, String mp3, String url) {
+        this.id = id;
+        this.name = name;
+        this.mp3 = mp3;
+        this.url = url;
+    }
+
+    public String getId() {
         return id;
     }
 
-    public void setId(long id) {
+    public void setId(String id) {
         this.id = id;
     }
 
-    public String getTitle() {
-        return title;
+    public String getName() {
+        return name;
     }
 
-    public void setTitle(String title) {
-        this.title = title;
+    public void setName(String name) {
+        this.name = name;
     }
 
-    public String getArtist() {
-        return artist;
+    public String getMp3() {
+        return mp3;
     }
 
-    public void setArtist(String artist) {
-        this.artist = artist;
+    public void setMp3(String mp3) {
+        this.mp3 = mp3;
+    }
+
+    public String getUrl() {
+        return url;
+    }
+
+    public void setUrl(String url) {
+        this.url = url;
     }
 }
+
+
+
+
