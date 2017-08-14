@@ -11,6 +11,7 @@ import android.os.AsyncTask;
 import android.os.IBinder;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
@@ -62,7 +63,6 @@ public class MainActivity extends AppCompatActivity {
         public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
             MusicService.MusicBinder binder=(MusicService.MusicBinder)iBinder;
             musicService=binder.getService();
-            musicService.setList(songList);
             musicBound=true;
         }
 
@@ -153,6 +153,7 @@ public class MainActivity extends AppCompatActivity {
             super.onPostExecute(aVoid);
 
             SongAdapter songAdapter=new SongAdapter(MainActivity.this,songList);
+            musicService.setList(songList);
             songView.setAdapter(songAdapter);
             songView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
                 @Override
@@ -164,6 +165,7 @@ public class MainActivity extends AppCompatActivity {
                     catch (Exception e)
                     {
                         e.printStackTrace();
+                        Log.e("itemclick", e.getMessage());
                     }
 
                 }
