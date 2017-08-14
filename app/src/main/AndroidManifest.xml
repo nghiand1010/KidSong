@@ -4,6 +4,8 @@
 
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
     <uses-permission android:name="android.permission.INTERNET"/>
+    <service android:name="com.example.nghia.kidsong.Services.MusicService" android:enabled="true"/>
+
 
     <application
         android:allowBackup="true"
@@ -19,6 +21,7 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <service android:name="com.example.nghia.kidsong.Services.MusicService" android:enabled="true"/>
     </application>
 
 </manifest>
