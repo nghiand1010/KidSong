@@ -55,16 +55,17 @@ public class DownloadFile{
             File extStore = Environment.getExternalStorageDirectory();
             String path = extStore.getAbsolutePath() + "/" + fileName;
 
+            File myFile = new File(path);
+            if (myFile.exists()){
+                return null;
+            }
+
             URL url1 = new URL(song.getUrl());
             URLConnection conexion = url1.openConnection();
             conexion.connect();
             int lenghtOfFile = conexion.getContentLength();
             InputStream input = new BufferedInputStream(url1.openStream());
 
-            File myFile = new File(path);
-            if (myFile.exists()){
-                return null;
-            }
 
             myFile.createNewFile();
 
