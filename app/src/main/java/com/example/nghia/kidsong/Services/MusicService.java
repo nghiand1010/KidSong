@@ -14,6 +14,7 @@ import java.util.Random;
 import android.app.Notification;
 import android.app.PendingIntent;
 
+import com.example.nghia.kidsong.FileControl.DownloadFile;
 import com.example.nghia.kidsong.MainActivity;
 import com.example.nghia.kidsong.R;
 import com.example.nghia.kidsong.Song;
@@ -57,7 +58,7 @@ MediaPlayer.OnErrorListener,MediaPlayer.OnCompletionListener{
 
     public void setShuffle(){
         if (shuffle){
-            shuffle=true;
+            shuffle=false;
         }
         else {
             shuffle=true;
@@ -73,9 +74,13 @@ MediaPlayer.OnErrorListener,MediaPlayer.OnCompletionListener{
         songTitle=playSong.getName();
 
         String currSong=playSong.getUrl();
-        Uri songUri = Uri.parse(currSong);
+        DownloadFile downloadFile=new DownloadFile(playSong);
+        String path=downloadFile.ReadFile();
+
+        Uri songUri = Uri.parse(path);
         try {
             player.setDataSource(getApplicationContext(),songUri);
+           // player.setDataSource(path);
 
         }
         catch (IOException e) {
@@ -130,6 +135,8 @@ MediaPlayer.OnErrorListener,MediaPlayer.OnCompletionListener{
             while (newSong==songPosn){
                 newSong=rand.nextInt(songs.size());
             }
+
+            songPosn=newSong;
         }
         else {
             songPosn++;

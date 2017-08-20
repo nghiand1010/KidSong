@@ -1,15 +1,20 @@
 package com.example.nghia.kidsong;
 
+import android.Manifest;
 import android.app.ProgressDialog;
 import android.content.ComponentName;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.content.pm.PackageManager;
 import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.AsyncTask;
+import android.os.Build;
 import android.os.IBinder;
+import android.support.annotation.NonNull;
+import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
@@ -21,6 +26,7 @@ import android.widget.AdapterView;
 import android.widget.ListView;
 import android.widget.MediaController.MediaPlayerControl;
 
+import com.example.nghia.kidsong.FileControl.DownloadFile;
 import com.example.nghia.kidsong.Music.MusicController;
 import com.example.nghia.kidsong.Services.MusicService;
 
@@ -49,8 +55,13 @@ public class MainActivity extends AppCompatActivity implements MediaPlayerContro
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         songView=(ListView)findViewById(R.id.song_list);
-        GetSongList();
-        setController();
+
+        if (isStoragePermissionGranted())
+        {
+            GetSongList();
+            setController();
+        }
+
     }
 
     @Override
@@ -63,6 +74,31 @@ public class MainActivity extends AppCompatActivity implements MediaPlayerContro
             startService(playIntent);
         }
 
+    }
+
+    public  boolean isStoragePermissionGranted() {
+        if (Build.VERSION.SDK_INT >= 23) {
+            if (checkSelfPermission(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                    == PackageManager.PERMISSION_GRANTED) {
+                return true;
+            } else {
+
+                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, 1);
+                return false;
+            }
+        }
+        else {
+            return true;
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if(grantResults[0]== PackageManager.PERMISSION_GRANTED){
+            GetSongList();
+            setController();
+        }
     }
 
     private ServiceConnection musicConnection=new ServiceConnection() {
@@ -207,6 +243,7 @@ public class MainActivity extends AppCompatActivity implements MediaPlayerContro
 
     @Override
     public void seekTo(int i) {
+        musicService.seek(i);
         musicService.go();
     }
 
@@ -267,7 +304,8 @@ public class MainActivity extends AppCompatActivity implements MediaPlayerContro
                     song.setName(jsSong.getString("name"));
                     song.setMp3(jsSong.getString("mp3"));
                     song.setUrl(jsSong.getString("url"));
-
+                    DownloadFile downloadFile =new DownloadFile(song);
+                    downloadFile.DownloadFile();
                     songList.add(song);
                 }
             }
