@@ -46,9 +46,11 @@ public class MainActivity extends AppCompatActivity implements MediaPlayerContro
     private MusicService musicService;
     private Intent playIntent;
     private boolean musicBound=false;
-    private MusicController controller;
-    private boolean paused=false;
-    private boolean playBackPaused=false;
+
+
+
+    public static MusicController controller;
+    private boolean paused=false, playbackPaused=false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -73,7 +75,6 @@ public class MainActivity extends AppCompatActivity implements MediaPlayerContro
             bindService(playIntent,musicConnection, Context.BIND_AUTO_CREATE);
             startService(playIntent);
         }
-
     }
 
     public  boolean isStoragePermissionGranted() {
@@ -167,20 +168,18 @@ public class MainActivity extends AppCompatActivity implements MediaPlayerContro
     public void playPrev(){
 
         musicService.playPrev();
-        if (playBackPaused){
+        if(playbackPaused){
             setController();
-            playBackPaused=false;
+            playbackPaused=false;
         }
-        controller.show(0);
     }
 
     public void playNext(){
         musicService.playNext();
-        if (playBackPaused){
+        if(playbackPaused){
             setController();
-            playBackPaused=false;
+            playbackPaused=false;
         }
-        controller.show(0);
     }
 
     @Override
@@ -197,7 +196,7 @@ public class MainActivity extends AppCompatActivity implements MediaPlayerContro
 
     @Override
     public void pause() {
-        playBackPaused=true;
+        playbackPaused=true;
         musicService.pausePlayer();
     }
 
@@ -233,7 +232,7 @@ public class MainActivity extends AppCompatActivity implements MediaPlayerContro
 
     @Override
     public int getCurrentPosition() {
-        if (musicService==null&&musicBound&&musicService.isPlaying()){
+        if (musicService!=null && musicBound && musicService.isPlaying()){
             return musicService.getPosn();
         }
         else {
@@ -244,7 +243,6 @@ public class MainActivity extends AppCompatActivity implements MediaPlayerContro
     @Override
     public void seekTo(int i) {
         musicService.seek(i);
-        musicService.go();
     }
 
     @Override
@@ -279,6 +277,9 @@ public class MainActivity extends AppCompatActivity implements MediaPlayerContro
     public int getAudioSessionId() {
         return 0;
     }
+
+
+
 
     class GetDataAsynTask extends AsyncTask<Void, Void, Void> {
 
@@ -331,13 +332,16 @@ public class MainActivity extends AppCompatActivity implements MediaPlayerContro
                 @Override
                 public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
                     try{
+
                         musicService.setSong(i);
                         musicService.playSong();
-                        if (playBackPaused){
+
+                        if(playbackPaused){
                             setController();
-                            playBackPaused=false;
+                            playbackPaused=false;
                         }
-                        controller.show(0);
+                        controller.show();
+
                     }
                     catch (Exception e)
                     {

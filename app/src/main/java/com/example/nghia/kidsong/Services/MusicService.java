@@ -1,6 +1,8 @@
 package com.example.nghia.kidsong.Services;
 
+import android.app.Application;
 import android.app.Service;
+import android.content.Context;
 import android.content.Intent;
 import android.media.AudioAttributes;
 import android.media.AudioManager;
@@ -80,7 +82,6 @@ MediaPlayer.OnErrorListener,MediaPlayer.OnCompletionListener{
         Uri songUri = Uri.parse(path);
         try {
             player.setDataSource(getApplicationContext(),songUri);
-           // player.setDataSource(path);
 
         }
         catch (IOException e) {
@@ -183,12 +184,20 @@ MediaPlayer.OnErrorListener,MediaPlayer.OnCompletionListener{
     @Override
     public void onPrepared(MediaPlayer mediaPlayer) {
         mediaPlayer.start();
-        Intent notIntent=new Intent(this, MainActivity.class);
-        notIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
-        PendingIntent pendingIntent=PendingIntent.getActivity(this,0,notIntent,PendingIntent.FLAG_UPDATE_CURRENT);
+        MainActivity.controller.show();
+//        Intent notIntent=new Intent(this, MainActivity.class);
+//        notIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+//        PendingIntent pendingIntent=PendingIntent.getActivity(this,0,notIntent,PendingIntent.FLAG_UPDATE_CURRENT);
+
+        Intent intent = new Intent(this, MainActivity.class);
+        intent.setAction(Intent.ACTION_MAIN);
+        intent.addCategory(Intent.CATEGORY_LAUNCHER);
+
+        PendingIntent pendingIntent2 = PendingIntent.getActivity(this, 0,
+                intent, 0);
 
         Notification.Builder builder=new Notification.Builder(this);
-        builder.setContentIntent(pendingIntent)
+        builder.setContentIntent(pendingIntent2)
                 .setSmallIcon(R.drawable.play)
                 .setTicker(songTitle)
                 .setOngoing(true)
