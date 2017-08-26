@@ -6,4 +6,7 @@ package com.example.nghia.kidsong;
 
 public class KSConstants {
     public static String JSON_URL="http://tinnhanxoso.com/babysong/playlist";
+    public static int songIndex=-1;
+
+   public static boolean IsPlaying;
 }

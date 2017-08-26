@@ -6,7 +6,9 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.BaseAdapter;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.ListView;
 import android.widget.TextView;
 
 import java.util.ArrayList;
@@ -46,12 +48,25 @@ public class SongAdapter extends BaseAdapter {
 
     @Override
     public View getView(int i, View view, ViewGroup viewGroup) {
+
         view = activity.getLayoutInflater().inflate(R.layout.songs_list, viewGroup, false);
 
+        ImageView ivPlayPause=(ImageView)view.findViewById(R.id.buttonSong);
         TextView tvSong=(TextView)view.findViewById(R.id.tvSong);
+
+        if( KSConstants.songIndex ==i){
+            ivPlayPause.setImageResource(R.drawable.musicplayer);
+
+        }else{
+            ivPlayPause.setImageResource(R.drawable.play1);
+        }
+
+
         Song currSong=songs.get(i);
         tvSong.setText(currSong.getName());
 
         return view;
     }
+
+
 }

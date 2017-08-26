@@ -2,6 +2,7 @@ package com.example.nghia.kidsong;
 
 import android.Manifest;
 import android.app.ProgressDialog;
+import android.content.ClipData;
 import android.content.ComponentName;
 import android.content.ContentResolver;
 import android.content.Context;
@@ -18,17 +19,22 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.Gravity;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.AdapterView;
+import android.widget.FrameLayout;
 import android.widget.ListView;
 import android.widget.MediaController.MediaPlayerControl;
 
 import com.example.nghia.kidsong.FileControl.DownloadFile;
 import com.example.nghia.kidsong.Music.MusicController;
 import com.example.nghia.kidsong.Services.MusicService;
+import com.google.android.gms.ads.AdRequest;
+import com.google.android.gms.ads.AdView;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -45,24 +51,27 @@ public class MainActivity extends AppCompatActivity implements MediaPlayerContro
     private ListView songView;
     private MusicService musicService;
     private Intent playIntent;
-    private boolean musicBound=false;
-
+    private boolean musicBound = false;
+    private AdView av;
 
 
     public static MusicController controller;
-    private boolean paused=false, playbackPaused=false;
+    private boolean paused = false, playbackPaused = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        songView=(ListView)findViewById(R.id.song_list);
+        songView = (ListView) findViewById(R.id.song_list);
 
-        if (isStoragePermissionGranted())
-        {
+        if (isStoragePermissionGranted()) {
             GetSongList();
             setController();
         }
+
+        av = (AdView) findViewById(R.id.adView);
+        AdRequest adRequest = new AdRequest.Builder().build();
+        av.loadAd(adRequest);
 
     }
 
@@ -70,14 +79,14 @@ public class MainActivity extends AppCompatActivity implements MediaPlayerContro
     protected void onStart() {
 
         super.onStart();
-        if (playIntent==null){
-            playIntent=new Intent(this,MusicService.class);
-            bindService(playIntent,musicConnection, Context.BIND_AUTO_CREATE);
+        if (playIntent == null) {
+            playIntent = new Intent(this, MusicService.class);
+            bindService(playIntent, musicConnection, Context.BIND_AUTO_CREATE);
             startService(playIntent);
         }
     }
 
-    public  boolean isStoragePermissionGranted() {
+    public boolean isStoragePermissionGranted() {
         if (Build.VERSION.SDK_INT >= 23) {
             if (checkSelfPermission(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
                     == PackageManager.PERMISSION_GRANTED) {
@@ -87,8 +96,7 @@ public class MainActivity extends AppCompatActivity implements MediaPlayerContro
                 ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, 1);
                 return false;
             }
-        }
-        else {
+        } else {
             return true;
         }
     }
@@ -96,23 +104,24 @@ public class MainActivity extends AppCompatActivity implements MediaPlayerContro
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if(grantResults[0]== PackageManager.PERMISSION_GRANTED){
+        if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
             GetSongList();
             setController();
         }
     }
 
-    private ServiceConnection musicConnection=new ServiceConnection() {
+    private ServiceConnection musicConnection = new ServiceConnection() {
         @Override
         public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
-            MusicService.MusicBinder binder=(MusicService.MusicBinder)iBinder;
-            musicService=binder.getService();
-            musicBound=true;
+            MusicService.MusicBinder binder = (MusicService.MusicBinder) iBinder;
+            musicService = binder.getService();
+            musicService.setListView(songView);
+            musicBound = true;
         }
 
         @Override
         public void onServiceDisconnected(ComponentName componentName) {
-            musicBound=false;
+            musicBound = false;
         }
     };
 
@@ -127,11 +136,17 @@ public class MainActivity extends AppCompatActivity implements MediaPlayerContro
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
             case R.id.action_shuffle:
-                musicService.setShuffle();
+                boolean shuffle=musicService.setShuffle();
+                if (shuffle){
+                   item.setIcon(R.drawable.repeat);
+                }else{
+                    item.setIcon(R.drawable.rand);
+                }
+
                 return true;
             case R.id.action_end:
                 stopService(playIntent);
-                musicService=null;
+                musicService = null;
                 System.exit(0);
                 return true;
             default:
@@ -139,15 +154,14 @@ public class MainActivity extends AppCompatActivity implements MediaPlayerContro
         }
     }
 
-    public void GetSongList()
-    {
-        GetDataAsynTask getSongAsync=new GetDataAsynTask();
+    public void GetSongList() {
+        GetDataAsynTask getSongAsync = new GetDataAsynTask();
         getSongAsync.execute();
 
     }
 
-    private void setController(){
-        controller=new MusicController(this);
+    private void setController() {
+        controller = new MusicController(this);
         controller.setPrevNextListeners(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -165,28 +179,33 @@ public class MainActivity extends AppCompatActivity implements MediaPlayerContro
         controller.setEnabled(true);
     }
 
-    public void playPrev(){
+    public void playPrev() {
 
         musicService.playPrev();
-        if(playbackPaused){
+        if (playbackPaused) {
             setController();
-            playbackPaused=false;
+            playbackPaused = false;
         }
     }
 
-    public void playNext(){
+    public void playNext() {
         musicService.playNext();
-        if(playbackPaused){
+        if (playbackPaused) {
             setController();
-            playbackPaused=false;
+            playbackPaused = false;
         }
     }
 
     @Override
     protected void onDestroy() {
         stopService(playIntent);
-        musicService=null;
+        musicService = null;
+
+        if (av != null) {
+            av.destroy();
+        }
         super.onDestroy();
+
     }
 
     @Override
@@ -196,22 +215,29 @@ public class MainActivity extends AppCompatActivity implements MediaPlayerContro
 
     @Override
     public void pause() {
-        playbackPaused=true;
+        playbackPaused = true;
         musicService.pausePlayer();
     }
 
     @Override
     protected void onPause() {
         super.onPause();
-        paused=true;
+        if (av != null) {
+            av.pause();
+        }
+        paused = true;
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        if (paused){
+        if (paused) {
             setController();
-            paused=false;
+            paused = false;
+        }
+
+        if (av != null) {
+            av.resume();
         }
     }
 
@@ -223,19 +249,18 @@ public class MainActivity extends AppCompatActivity implements MediaPlayerContro
 
     @Override
     public int getDuration() {
-        if (musicService!=null&&musicBound&&musicService.isPlaying()){
+        if (musicService != null && musicBound && musicService.isPlaying()) {
             return musicService.getDuration();
-        }else{
+        } else {
             return 0;
         }
     }
 
     @Override
     public int getCurrentPosition() {
-        if (musicService!=null && musicBound && musicService.isPlaying()){
+        if (musicService != null && musicBound && musicService.isPlaying()) {
             return musicService.getPosn();
-        }
-        else {
+        } else {
             return 0;
         }
     }
@@ -247,9 +272,11 @@ public class MainActivity extends AppCompatActivity implements MediaPlayerContro
 
     @Override
     public boolean isPlaying() {
-        if (musicService!=null&&musicBound){
+        if (musicService != null && musicBound) {
+            KSConstants.IsPlaying = musicService.isPlaying();
             return musicService.isPlaying();
         }
+        KSConstants.IsPlaying = false;
         return false;
     }
 
@@ -279,8 +306,6 @@ public class MainActivity extends AppCompatActivity implements MediaPlayerContro
     }
 
 
-
-
     class GetDataAsynTask extends AsyncTask<Void, Void, Void> {
 
         @Override
@@ -291,31 +316,27 @@ public class MainActivity extends AppCompatActivity implements MediaPlayerContro
         @Override
         protected Void doInBackground(Void... voids) {
 
-            String url=KSConstants.JSON_URL;
+            String url = KSConstants.JSON_URL;
             JSONObject jsonObj;
             try {
-                jsonObj=JsonReader.readJsonFromUrl(url);
-                JSONArray jsonArray=jsonObj.getJSONArray("content");
-                songList=new ArrayList<Song>();
+                jsonObj = JsonReader.readJsonFromUrl(url);
+                JSONArray jsonArray = jsonObj.getJSONArray("content");
+                songList = new ArrayList<Song>();
 
-                for (int i=0;i<jsonArray.length();i++){
-                    JSONObject jsSong= jsonArray.getJSONObject(i);
-                    Song song=new Song();
+                for (int i = 0; i < jsonArray.length(); i++) {
+                    JSONObject jsSong = jsonArray.getJSONObject(i);
+                    Song song = new Song();
                     song.setId(jsSong.getString("id"));
                     song.setName(jsSong.getString("name"));
                     song.setMp3(jsSong.getString("mp3"));
                     song.setUrl(jsSong.getString("url"));
-                    DownloadFile downloadFile =new DownloadFile(song);
+                    DownloadFile downloadFile = new DownloadFile(song);
                     downloadFile.DownloadFile();
                     songList.add(song);
                 }
-            }
-            catch (IOException ex)
-            {
+            } catch (IOException ex) {
                 ex.printStackTrace();
-            }
-            catch (JSONException e)
-            {
+            } catch (JSONException e) {
                 e.printStackTrace();
             }
             return null;
@@ -325,32 +346,30 @@ public class MainActivity extends AppCompatActivity implements MediaPlayerContro
         protected void onPostExecute(Void aVoid) {
             super.onPostExecute(aVoid);
 
-            SongAdapter songAdapter=new SongAdapter(MainActivity.this,songList);
+            final SongAdapter songAdapter = new SongAdapter(MainActivity.this, songList);
             musicService.setList(songList);
             songView.setAdapter(songAdapter);
             songView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
                 @Override
                 public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
-                    try{
+                    try {
 
                         musicService.setSong(i);
                         musicService.playSong();
-
-                        if(playbackPaused){
+                        if (playbackPaused) {
                             setController();
-                            playbackPaused=false;
+                            playbackPaused = false;
                         }
                         controller.show();
 
-                    }
-                    catch (Exception e)
-                    {
+                    } catch (Exception e) {
                         e.printStackTrace();
                         Log.e("itemclick", e.getMessage());
                     }
 
                 }
             });
+
         }
     }
 

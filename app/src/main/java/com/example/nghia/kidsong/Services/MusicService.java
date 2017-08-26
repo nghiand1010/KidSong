@@ -15,11 +15,15 @@ import android.support.annotation.Nullable;
 import java.util.Random;
 import android.app.Notification;
 import android.app.PendingIntent;
+import android.support.v4.widget.ListViewAutoScrollHelper;
+import android.widget.ListView;
 
 import com.example.nghia.kidsong.FileControl.DownloadFile;
+import com.example.nghia.kidsong.KSConstants;
 import com.example.nghia.kidsong.MainActivity;
 import com.example.nghia.kidsong.R;
 import com.example.nghia.kidsong.Song;
+import com.example.nghia.kidsong.SongAdapter;
 
 import java.io.IOException;
 import java.util.List;
@@ -39,11 +43,11 @@ MediaPlayer.OnErrorListener,MediaPlayer.OnCompletionListener{
     private static final int NOTIFY_ID=1;
     private boolean shuffle=false;
     private Random rand;
+    private ListView listView;
 
     @Override
     public void onCreate() {
         super.onCreate();
-        songPosn=0;
         player=new MediaPlayer();
         initMusicPlayer();
         rand=new Random();
@@ -58,13 +62,15 @@ MediaPlayer.OnErrorListener,MediaPlayer.OnCompletionListener{
         player.setOnErrorListener(this);
     }
 
-    public void setShuffle(){
+    public boolean setShuffle(){
         if (shuffle){
             shuffle=false;
         }
         else {
             shuffle=true;
         }
+
+        return shuffle;
     }
 
 
@@ -94,7 +100,7 @@ MediaPlayer.OnErrorListener,MediaPlayer.OnCompletionListener{
 
     public void setSong(int songIndex)
     {
-        songPosn=songIndex;
+        setSongPosn(songIndex);
     }
 
     public int getPosn(){
@@ -122,10 +128,21 @@ MediaPlayer.OnErrorListener,MediaPlayer.OnCompletionListener{
         player.start();
     }
 
+    public void setSongPosn(int songPosn) {
+        this.songPosn = songPosn;
+        KSConstants.songIndex=songPosn;
+        SongAdapter adapter= (SongAdapter) listView.getAdapter();
+
+        if (adapter!=null){
+            adapter.notifyDataSetChanged();
+        }
+
+    }
+
     public void playPrev(){
-        songPosn--;
+        setSongPosn(songPosn-1);
         if (songPosn<=0)
-            songPosn=songs.size()-1;
+            setSongPosn(songs.size()-1);
         playSong();
     }
 
@@ -137,12 +154,12 @@ MediaPlayer.OnErrorListener,MediaPlayer.OnCompletionListener{
                 newSong=rand.nextInt(songs.size());
             }
 
-            songPosn=newSong;
+            setSongPosn(newSong);
         }
         else {
-            songPosn++;
+            setSongPosn(songPosn+1);
             if (songPosn>=songs.size()){
-                songPosn=0;
+                setSongPosn(0);
             }
         }
 
@@ -209,6 +226,11 @@ MediaPlayer.OnErrorListener,MediaPlayer.OnCompletionListener{
 
     public void setList(List<Song> theSongs){
         songs=theSongs;
+    }
+
+    public void setListView(ListView _listView){
+        listView=_listView;
+        setSongPosn(0);
     }
 
     public class MusicBinder extends Binder {
