@@ -81,7 +81,6 @@ MediaPlayer.OnErrorListener,MediaPlayer.OnCompletionListener{
         Song playSong=songs.get(songPosn);
         songTitle=playSong.getName();
 
-        String currSong=playSong.getUrl();
         DownloadFile downloadFile=new DownloadFile(playSong);
         String path=downloadFile.ReadFile();
 

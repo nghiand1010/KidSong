@@ -1,6 +1,7 @@
 package com.example.nghia.kidsong;
 
 import android.Manifest;
+import android.app.Activity;
 import android.app.ProgressDialog;
 import android.content.ClipData;
 import android.content.ComponentName;
@@ -8,8 +9,11 @@ import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.media.MediaPlayer;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Build;
@@ -29,8 +33,10 @@ import android.widget.AdapterView;
 import android.widget.FrameLayout;
 import android.widget.ListView;
 import android.widget.MediaController.MediaPlayerControl;
+import android.widget.Toast;
 
 import com.example.nghia.kidsong.FileControl.DownloadFile;
+import com.example.nghia.kidsong.FileControl.KSJSON;
 import com.example.nghia.kidsong.Music.MusicController;
 import com.example.nghia.kidsong.Services.MusicService;
 import com.google.android.gms.ads.AdRequest;
@@ -41,6 +47,9 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.URL;
+import java.net.URLConnection;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -53,6 +62,7 @@ public class MainActivity extends AppCompatActivity implements MediaPlayerContro
     private Intent playIntent;
     private boolean musicBound = false;
     private AdView av;
+    private boolean isInternetAvaiable=false;
 
 
     public static MusicController controller;
@@ -79,6 +89,7 @@ public class MainActivity extends AppCompatActivity implements MediaPlayerContro
     protected void onStart() {
 
         super.onStart();
+
         if (playIntent == null) {
             playIntent = new Intent(this, MusicService.class);
             bindService(playIntent, musicConnection, Context.BIND_AUTO_CREATE);
@@ -136,17 +147,17 @@ public class MainActivity extends AppCompatActivity implements MediaPlayerContro
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
             case R.id.action_shuffle:
-                boolean shuffle=musicService.setShuffle();
-                if (shuffle){
-                   item.setIcon(R.drawable.repeat);
-                }else{
+                boolean shuffle = musicService.setShuffle();
+                if (shuffle) {
+                    item.setIcon(R.drawable.repeat);
+                } else {
                     item.setIcon(R.drawable.rand);
                 }
 
                 return true;
             case R.id.action_end:
                 stopService(playIntent);
-                musicService = null;
+                musicService=null;
                 System.exit(0);
                 return true;
             default:
@@ -155,9 +166,114 @@ public class MainActivity extends AppCompatActivity implements MediaPlayerContro
     }
 
     public void GetSongList() {
+
         GetDataAsynTask getSongAsync = new GetDataAsynTask();
         getSongAsync.execute();
 
+    }
+
+    private void GetSongFromLocal() {
+        SharedPreferences sharedPref = MainActivity.this.getPreferences(Activity.MODE_PRIVATE);
+        String arrayString = sharedPref.getString("KS", null);
+        songList = new ArrayList<Song>();
+        if (arrayString == null) {
+
+            return;
+        }
+
+        try {
+            JSONObject jsonObj = new JSONObject(arrayString);
+            JSONArray jsonArray = jsonObj.getJSONArray("content");
+
+            for (int i = 0; i < jsonArray.length(); i++) {
+                JSONObject jsSong = jsonArray.getJSONObject(i);
+                Song song = new Song();
+                song.setId(jsSong.getString("id"));
+                song.setName(jsSong.getString("name"));
+                song.setMp3(jsSong.getString("mp3"));
+                song.setUrl(jsSong.getString("url"));
+                songList.add(song);
+            }
+        }
+     catch (JSONException e) {
+        e.printStackTrace();
+    }
+    }
+
+    private void GetSongFromInternet() {
+        String url = KSConstants.JSON_URL;
+        JSONObject jsonObj;
+        try {
+            jsonObj = JsonReader.readJsonFromUrl(url);
+            SharedPreferences.Editor editor = MainActivity.this.getPreferences(Activity.MODE_PRIVATE).edit();
+            editor.putString("KS", jsonObj.toString());
+            editor.commit();
+            JSONArray jsonArray = jsonObj.getJSONArray("content");
+            songList = new ArrayList<Song>();
+
+            for (int i = 0; i < jsonArray.length(); i++) {
+                JSONObject jsSong = jsonArray.getJSONObject(i);
+                Song song = new Song();
+                song.setId(jsSong.getString("id"));
+                song.setName(jsSong.getString("name"));
+                song.setMp3(jsSong.getString("mp3"));
+                song.setUrl(jsSong.getString("url"));
+                DownloadFile downloadFile = new DownloadFile(song);
+                downloadFile.DownloadFile();
+                songList.add(song);
+            }
+        } catch (IOException ex) {
+            ex.printStackTrace();
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void SetSongView() {
+
+        if (songList==null||songList.size()==0){
+            return;
+        }
+
+        final SongAdapter songAdapter = new SongAdapter(this, songList);
+        if (musicService==null){
+            return;
+        }
+        musicService.setList(songList);
+        songView.setAdapter(songAdapter);
+        songView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
+                try {
+
+                    musicService.setSong(i);
+                    musicService.playSong();
+                    if (playbackPaused) {
+                        setController();
+                        playbackPaused = false;
+                    }
+                    controller.show();
+
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    Log.e("itemclick", e.getMessage());
+                }
+
+            }
+        });
+
+
+    }
+
+    public boolean isInternetAvailable() {
+        try {
+            URLConnection urlConnection = new URL(KSConstants.JSON_URL).openConnection();
+            urlConnection.setConnectTimeout(400);
+            urlConnection.connect();
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     private void setController() {
@@ -199,7 +315,7 @@ public class MainActivity extends AppCompatActivity implements MediaPlayerContro
     @Override
     protected void onDestroy() {
         stopService(playIntent);
-        musicService = null;
+        musicService=null;
 
         if (av != null) {
             av.destroy();
@@ -307,7 +423,6 @@ public class MainActivity extends AppCompatActivity implements MediaPlayerContro
 
 
     class GetDataAsynTask extends AsyncTask<Void, Void, Void> {
-
         @Override
         protected void onPreExecute() {
             super.onPreExecute();
@@ -315,61 +430,27 @@ public class MainActivity extends AppCompatActivity implements MediaPlayerContro
 
         @Override
         protected Void doInBackground(Void... voids) {
+            isInternetAvaiable=isInternetAvailable();
+            if (!isInternetAvaiable) {
+                GetSongFromLocal();
 
-            String url = KSConstants.JSON_URL;
-            JSONObject jsonObj;
-            try {
-                jsonObj = JsonReader.readJsonFromUrl(url);
-                JSONArray jsonArray = jsonObj.getJSONArray("content");
-                songList = new ArrayList<Song>();
+            }else{
 
-                for (int i = 0; i < jsonArray.length(); i++) {
-                    JSONObject jsSong = jsonArray.getJSONObject(i);
-                    Song song = new Song();
-                    song.setId(jsSong.getString("id"));
-                    song.setName(jsSong.getString("name"));
-                    song.setMp3(jsSong.getString("mp3"));
-                    song.setUrl(jsSong.getString("url"));
-                    DownloadFile downloadFile = new DownloadFile(song);
-                    downloadFile.DownloadFile();
-                    songList.add(song);
-                }
-            } catch (IOException ex) {
-                ex.printStackTrace();
-            } catch (JSONException e) {
-                e.printStackTrace();
+                GetSongFromInternet();
             }
+
             return null;
         }
+
 
         @Override
         protected void onPostExecute(Void aVoid) {
             super.onPostExecute(aVoid);
-
-            final SongAdapter songAdapter = new SongAdapter(MainActivity.this, songList);
-            musicService.setList(songList);
-            songView.setAdapter(songAdapter);
-            songView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-                @Override
-                public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
-                    try {
-
-                        musicService.setSong(i);
-                        musicService.playSong();
-                        if (playbackPaused) {
-                            setController();
-                            playbackPaused = false;
-                        }
-                        controller.show();
-
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                        Log.e("itemclick", e.getMessage());
-                    }
-
-                }
-            });
-
+            if (!isInternetAvaiable){
+                Toast.makeText(MainActivity.this.getApplicationContext(),
+                        "Please check your Internet connection", Toast.LENGTH_LONG).show();
+            }
+            SetSongView();
         }
     }
 
